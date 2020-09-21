@@ -1,0 +1,9 @@
+spring:
+  cloud:
+    config:
+      uri: http://config-server1:8080
+      label: master
+      profile: dev
+      name: cloud-gateway
+      username: admin
+      password: admin

@@ -1,0 +1,14 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: gateway
+  profiles:
+    active: dev
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:[${spring.cloud.client.ip-address}:${server.port}]
+  client:
+    service-url:
+      defaultZone: http://admin:admin@eureka1:8080/eureka/,http://admin:admin@eureka2:8080/eureka/,http://admin:admin@eureka3:8080/eureka/
