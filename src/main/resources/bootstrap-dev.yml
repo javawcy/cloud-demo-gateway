@@ -1,9 +1,17 @@
 spring:
   cloud:
     config:
-      uri: http://config-server1:8080
       label: master
       profile: dev
       name: cloud-gateway
+      discovery:
+        service-id: config-server
+        enabled: true
       username: admin
       password: admin
+
+  rabbitmq:
+    username: guest
+    password: guest
+    host: 192.168.10.124
+    port: 5672

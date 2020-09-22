@@ -5,6 +5,10 @@ spring:
     name: gateway
   profiles:
     active: dev
+  security:
+    user:
+      name: admin
+      password: admin
 eureka:
   instance:
     prefer-ip-address: true
@@ -12,3 +16,11 @@ eureka:
   client:
     service-url:
       defaultZone: http://admin:admin@eureka1:8080/eureka/,http://admin:admin@eureka2:8080/eureka/,http://admin:admin@eureka3:8080/eureka/
+management:
+  endpoint:
+    gateway:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health, info, bus-refresh, gateway
