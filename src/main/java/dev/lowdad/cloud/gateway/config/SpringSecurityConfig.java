@@ -1,6 +1,7 @@
 package dev.lowdad.cloud.gateway.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -53,6 +54,7 @@ public class SpringSecurityConfig {
     }
 
     @Bean
+    @RefreshScope
     public JwtAccessTokenConverter jwtTokenEnhancer(){
         JwtAccessTokenConverter jwtTokenEnhancer = new JwtAccessTokenConverter();
         jwtTokenEnhancer.setSigningKey(jwtSignConfiguration.getSignKey());
