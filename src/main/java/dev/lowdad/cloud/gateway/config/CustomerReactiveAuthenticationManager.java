@@ -19,11 +19,11 @@ import reactor.core.publisher.Mono;
  * @since 2020/9/25
  */
 @Slf4j
-public class ReactiveJwtAuthenticationManager implements ReactiveAuthenticationManager {
+public class CustomerReactiveAuthenticationManager implements ReactiveAuthenticationManager {
 
     private final TokenStore tokenStore;
 
-    public ReactiveJwtAuthenticationManager(TokenStore tokenStore) {
+    public CustomerReactiveAuthenticationManager(TokenStore tokenStore) {
         this.tokenStore = tokenStore;
     }
 

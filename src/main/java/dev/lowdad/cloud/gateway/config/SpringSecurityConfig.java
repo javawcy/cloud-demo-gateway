@@ -10,12 +10,15 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.provider.token.TokenStore;
+import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
+import org.springframework.security.oauth2.provider.token.store.redis.RedisTokenStore;
 import org.springframework.security.oauth2.server.resource.web.server.ServerBearerTokenAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.authentication.AuthenticationWebFilter;
@@ -36,7 +39,13 @@ import reactor.core.publisher.Mono;
 @Configuration
 public class SpringSecurityConfig {
 
+    //定义token存储方式
+    private enum TokenStoreType {
+        REDIS, JWT
+    }
+
     private static final String MAX_AGE = "18000L";
+    private final TokenStoreType tokenStoreType = TokenStoreType.JWT;
     private final RedisConnectionFactory redisConnectionFactory;
     private final AccessManager accessManager;
     private final JwtSignConfiguration jwtSignConfiguration;
@@ -48,18 +57,40 @@ public class SpringSecurityConfig {
         this.jwtSignConfiguration = jwtSignConfiguration;
     }
 
-    @Bean
-    public TokenStore tokenStore() {
-        return new JwtTokenStore(jwtTokenEnhancer());
-    }
-
+    /**
+     * jwt 序列化,signKey 可配置
+     *
+     * @return JwtAccessTokenConverter
+     */
     @Bean
     @RefreshScope
-    public JwtAccessTokenConverter jwtTokenEnhancer(){
+    public JwtAccessTokenConverter jwtTokenEnhancer() {
         JwtAccessTokenConverter jwtTokenEnhancer = new JwtAccessTokenConverter();
         jwtTokenEnhancer.setSigningKey(jwtSignConfiguration.getSignKey());
         return jwtTokenEnhancer;
     }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * 定义token存储方式
+     *
+     * @return TokenStore
+     */
+    @Bean
+    public TokenStore tokenStore() {
+        switch (tokenStoreType) {
+            case REDIS:
+                return new RedisTokenStore(redisConnectionFactory);
+            case JWT:
+                return new JwtTokenStore(jwtTokenEnhancer());
+        }
+        return new InMemoryTokenStore();
+    }
+
 
     /**
      * 跨域配置
@@ -92,7 +123,7 @@ public class SpringSecurityConfig {
     @Bean
     public SecurityWebFilterChain webFluxSecurityFilterChain(ServerHttpSecurity httpSecurity) throws Exception{
         //token管理器
-        ReactiveAuthenticationManager tokenAuthenticationManager = new ReactiveJwtAuthenticationManager(tokenStore());
+        org.springframework.security.authentication.ReactiveAuthenticationManager tokenAuthenticationManager = new CustomerReactiveAuthenticationManager(tokenStore());
         //认证过滤器
         AuthenticationWebFilter authenticationWebFilter = new AuthenticationWebFilter(tokenAuthenticationManager);
         authenticationWebFilter.setServerAuthenticationConverter(new ServerBearerTokenAuthenticationConverter());
