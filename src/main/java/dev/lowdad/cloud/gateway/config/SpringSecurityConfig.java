@@ -1,6 +1,9 @@
 package dev.lowdad.cloud.gateway.config;
 
+import dev.lowdad.cloud.common.enums.TokenStoreType;
+import dev.lowdad.cloud.common.model.vo.UserInfoVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cglib.beans.BeanMap;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,21 +15,30 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.provider.token.DefaultAccessTokenConverter;
+import org.springframework.security.oauth2.provider.token.DefaultUserAuthenticationConverter;
 import org.springframework.security.oauth2.provider.token.TokenStore;
 import org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore;
 import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
 import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.security.oauth2.provider.token.store.redis.RedisTokenStore;
 import org.springframework.security.oauth2.server.resource.web.server.ServerBearerTokenAuthenticationConverter;
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.authentication.AuthenticationWebFilter;
+import org.springframework.util.StringUtils;
 import org.springframework.web.cors.reactive.CorsUtils;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * <p>
@@ -38,11 +50,6 @@ import reactor.core.publisher.Mono;
  */
 @Configuration
 public class SpringSecurityConfig {
-
-    //定义token存储方式
-    private enum TokenStoreType {
-        REDIS, JWT
-    }
 
     private static final String MAX_AGE = "18000L";
     private final TokenStoreType tokenStoreType = TokenStoreType.JWT;
@@ -67,6 +74,20 @@ public class SpringSecurityConfig {
     public JwtAccessTokenConverter jwtTokenEnhancer() {
         JwtAccessTokenConverter jwtTokenEnhancer = new JwtAccessTokenConverter();
         jwtTokenEnhancer.setSigningKey(jwtSignConfiguration.getSignKey());
+        ((DefaultAccessTokenConverter) jwtTokenEnhancer.getAccessTokenConverter()).setUserTokenConverter(new DefaultUserAuthenticationConverter() {
+            @Override
+            public Authentication extractAuthentication(Map<String, ?> map) {
+                UserInfoVO userInfoVO = new UserInfoVO();
+                BeanMap.create(userInfoVO).putAll(map);
+                Object authorities = map.get("authorities");
+                if (authorities instanceof String) {
+                    userInfoVO.setAuthorities(AuthorityUtils.commaSeparatedStringToAuthorityList((String) authorities));
+                } else if (authorities instanceof Collection) {
+                    userInfoVO.setAuthorities(AuthorityUtils.commaSeparatedStringToAuthorityList(StringUtils.collectionToCommaDelimitedString((Collection) authorities)));
+                }
+                return new PreAuthenticatedAuthenticationToken(userInfoVO, null, userInfoVO.getAuthorities());
+            }
+        });
         return jwtTokenEnhancer;
     }
 
